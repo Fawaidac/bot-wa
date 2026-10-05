@@ -348,7 +348,7 @@ _Jika kendala masih berlanjut, mohon menunggu tim kami menuju ke ruangan / menan
   // 2. Jika TIDAK ADA di mapping di atas, gunakan AI untuk generate saran troubleshooting
   try {
     const prompt = `Berikan 3 langkah singkat dan praktis tindakan awal (troubleshooting) untuk staf rumah sakit yang mengalami kendala IT / SIMRS / Hardware berikut: "${permasalahan}". Jawab HANYA berupa 3 poin bernomor tanpa salam pembuka atau penutup. Gunakan bahasa Indonesia yang ramah, ringkas, dan jelas.`;
-    
+
     let aiText = null;
     try {
       const aiPromise = gemini.models.generateContent({
@@ -365,7 +365,7 @@ _Jika kendala masih berlanjut, mohon menunggu tim kami menuju ke ruangan / menan
       // Fallback AI jika Gemini timeout
       try {
         aiText = await processWithFallback(prompt, "Kamu adalah asisten IT support rumah sakit.");
-      } catch {}
+      } catch { }
     }
 
     if (aiText && aiText.trim().length > 15) {
@@ -1018,7 +1018,7 @@ async function processAiMessage(
   isExecutive = true,
   onProgress = null,
 ) {
-  const systemInstruction = `Kamu adalah Asisten AI Internal Resmi Rumah Sakit yang terhubung langsung ke seluruh database SIMRS.
+  const systemInstruction = `Kamu adalah Soesie, Asisten AI Internal Resmi Rumah Sakit yang terhubung langsung ke seluruh database SIMRS.
 
 INFORMASI STRUKTUR DATABASE SIMRS:
 ${DYNAMIC_DATABASE_SCHEMA}
@@ -1219,7 +1219,7 @@ async function startBot() {
 
       // =========================================================================
       // TOGGLE PERMISSION AI: !bot on / !bot off (per-user, default OFF)
-      // Fitur Pelaporan Tiket & Done TIDAK perlu permission ini.
+      // Fitur Pelaporan Tiket, Done, dan chat berawalan 'Halo Soesie' TIDAK perlu !bot on.
       // =========================================================================
       if (textLowerCmd === "!bot on") {
         setBotActiveForUser(sender, true);
@@ -1229,7 +1229,7 @@ async function startBot() {
           sock,
           chatJid,
           {
-            text: "✅ *Bot AI SIMRS Aktif untuk Anda!*\nSilakan ajukan pertanyaan seputar data SIMRS.\nKetik *!bot off* untuk menonaktifkan.",
+            text: "✅ *Bot AI SIMRS Aktif untuk Anda!*\nSilakan ajukan pertanyaan seputar data SIMRS.\nKetik *!bot off* untuk menonaktifkan.\n\n_Tips: Anda juga bisa langsung bertanya kapan saja menggunakan awalan *Halo Soesie* tanpa perlu *!bot on*._",
           },
           msg,
         );
@@ -1243,7 +1243,7 @@ async function startBot() {
           sock,
           chatJid,
           {
-            text: "🔴 *Bot AI SIMRS Nonaktif untuk Anda.*\nBot tidak akan membalas pertanyaan Anda hingga diaktifkan kembali dengan *!bot on*.\n\n_Fitur Pelaporan Tiket tetap aktif._",
+            text: "🔴 *Bot AI SIMRS Nonaktif untuk Anda.*\nBot tidak akan membalas chat biasa hingga diaktifkan kembali dengan *!bot on*.\n\n_Catatan: Anda tetap dapat bertanya kapan saja dengan awalan *Halo Soesie* (contoh: *Halo Soesie jadwal dokter poli mata hari ini*). Fitur Pelaporan Tiket juga tetap aktif._",
           },
           msg,
         );
@@ -1540,10 +1540,13 @@ _Kepuasan Anda adalah prioritas kami._`;
 
       // =========================================================================
       // DILANJUTKAN KE AI ROUTER (Jika bukan Laporan/Done/Shareloc)
-      // Butuh permission !bot on per-user (default OFF)
+      // Syarat: Pengguna mengaktifkan !bot on ATAU pesan diawali dengan "halo soesie"
       // =========================================================================
-      if (!isBotActiveForUser(sender)) {
-        // Bot AI tidak aktif untuk user ini → skip, jangan balas apa-apa
+      const haloSoesieRegex = /^(?:halo|hai)\s+soesi?e?\b[\s,!?:.]*/i;
+      const isHaloSoesie = haloSoesieRegex.test(textMessage.trim());
+
+      if (!isBotActiveForUser(sender) && !isHaloSoesie) {
+        // Bot AI tidak aktif untuk user ini dan tidak diawali "halo soesie" → skip, jangan balas apa-apa
         console.log(`⏭️ Bot AI tidak aktif untuk user ${sender.number || sender.lid || sender.senderJid} di ${chatJid}, pesan diabaikan.`);
         continue;
       }
@@ -1560,8 +1563,13 @@ _Kepuasan Anda adalah prioritas kami._`;
           await safeSend(sock, chatJid, { text: terminalText }, msg);
         };
 
+        // Jika diawali "halo soesie", bersihkan prefix agar AI menerima inti pertanyaan
+        const cleanedText = isHaloSoesie
+          ? (textMessage.trim().replace(haloSoesieRegex, "").trim() || textMessage)
+          : textMessage;
+
         let replyText = await processAiMessage(
-          textMessage,
+          cleanedText,
           isExecutive,
           onProgress,
         );

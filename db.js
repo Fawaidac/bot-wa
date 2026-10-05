@@ -5,11 +5,11 @@ dotenv.config();
 
 // Koneksi Pool ke Database SIMRS
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.DB_HOST || "localhost",
+  port: parseInt(process.env.DB_PORT, 10) || 3306,
+  user: process.env.DB_USER || process.env.DB_USERNAME || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || process.env.DB_DATABASE || "simrs",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -55,7 +55,8 @@ export async function getDatabaseSchema() {
       WHERE TABLE_SCHEMA = ?
       ORDER BY TABLE_NAME, ORDINAL_POSITION;
     `;
-    const [rows] = await pool.execute(sql, [process.env.DB_NAME]);
+    const dbName = process.env.DB_NAME || process.env.DB_DATABASE || "simrs";
+    const [rows] = await pool.execute(sql, [dbName]);
 
     // Grouping kolom berdasarkan nama tabel
     const schemaMap = {};
@@ -66,7 +67,7 @@ export async function getDatabaseSchema() {
       schemaMap[row.TABLE_NAME].push(row.COLUMN_NAME);
     });
 
-    let schemaText = `Daftar seluruh tabel dan kolom yang tersedia di database ${process.env.DB_NAME}:\n`;
+    let schemaText = `Daftar seluruh tabel dan kolom yang tersedia di database ${dbName}:\n`;
     for (const [table, columns] of Object.entries(schemaMap)) {
       schemaText += `- Tabel \`${table}\`: (${columns.join(", ")})\n`;
     }
