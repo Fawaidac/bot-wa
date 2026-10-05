@@ -1,0 +1,21 @@
+{
+  "name": "bot-wa-simrs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^2.24.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "dotenv": "^18.0.3",
+    "mysql2": "^3.24.4",
+    "openai": "^7.22.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
